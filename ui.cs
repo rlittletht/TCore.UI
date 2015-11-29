@@ -273,7 +273,27 @@ namespace TCore.UI
 		}    
 	}
 
-    public class ui
+    public class RenderSupp
     {
+        /* R E N D E R  H E A D I N G  L I N E */
+        /*----------------------------------------------------------------------------
+        	%%Function: RenderHeadingLine
+        	%%Qualified: TCore.UI.RenderSupp.RenderHeadingLine
+        	%%Contact: rlittle
+        	
+        ----------------------------------------------------------------------------*/
+        static public void RenderHeadingLine(object sender, System.Windows.Forms.PaintEventArgs e)
+        {
+            Label lbl = (Label)sender;
+            string s = (string)lbl.Tag;
+
+            SizeF sf = e.Graphics.MeasureString(s, lbl.Font);
+            int nWidth = (int)sf.Width;
+            int nHeight = (int)sf.Height;
+
+            e.Graphics.DrawString(s, lbl.Font, new SolidBrush(Color.SlateBlue), 0, 0);// new System.Drawing.Point(0, (lbl.Width - nWidth) / 2));
+            e.Graphics.DrawLine(new Pen(new SolidBrush(Color.Gray), 1), 6 + nWidth + 1, (nHeight / 2), lbl.Width, (nHeight / 2));
+        }
+
     }
 }
