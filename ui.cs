@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace TCore.UI
@@ -30,13 +31,13 @@ namespace TCore.UI
 			%%Contact: rlittle
 
 		----------------------------------------------------------------------------*/
-		private InputBox(string sPrompt, string sText, bool fShowBrowse, string sLabel)
+		private InputBox(string sPrompt, string sText, bool fShowBrowse, bool fHideInput, string sLabel)
 		{
 			m_sLabel = sLabel;
-			InitializeComponent(fShowBrowse);
+			InitializeComponent(fShowBrowse, fHideInput);
 			if (sText != null)
 				textBox1.Text = sText;
-	
+
 			this.Text = sPrompt;
 		}
 	
@@ -66,7 +67,7 @@ namespace TCore.UI
 			%%Contact: rlittle
 
 		----------------------------------------------------------------------------*/
-		private void InitializeComponent(bool fShowBrowse)
+		private void InitializeComponent(bool fShowBrowse, bool fHideInput)
 		{
 			this.textBox1 = new System.Windows.Forms.TextBox();
 			this.m_lbl = new Label();
@@ -165,13 +166,16 @@ namespace TCore.UI
 			this.Controls.AddRange(new System.Windows.Forms.Control[] {
 																		 this.button2,
 																		 this.button1,
-																		 this.m_lbl,
-																		 this.textBox1});
+																		 this.m_lbl});
 			if (fShowBrowse)
 				{
 				Controls.Add(buttonBrowse);
 				}
 
+            if (!fHideInput)
+                {
+                Controls.Add(this.textBox1);
+                }
 //			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
 			this.Name = "InputBox";
 			this.Text = "InputBox";
@@ -244,7 +248,7 @@ namespace TCore.UI
 		----------------------------------------------------------------------------*/
 		public static bool ShowInputBox(string sPrompt, string s, out string sResponse)
 		{
-			InputBox box = new InputBox(sPrompt, s, false, null);
+			InputBox box = new InputBox(sPrompt, s, false, false, null);
 			box.m_fCanceled = false;
 
 			box.ShowDialog();
@@ -254,17 +258,36 @@ namespace TCore.UI
 
 		public static bool ShowInputBox(string sPrompt, string sLabel, string s, out string sResponse)
 		{
-			InputBox box = new InputBox(sPrompt, s, false, sLabel);
+			InputBox box = new InputBox(sPrompt, s, false, false, sLabel);
 			box.m_fCanceled = false;
 
 			box.ShowDialog();
 			sResponse = box.textBox1.Text;
 			return !box.m_fCanceled;
-		}    
+		}
 
-		public static bool ShowBrowseBox(string sPrompt, string s, out string sResponse, string sFilter, int width)
+        public static bool ShowInputBoxModelessWait(string sPrompt, string sLabel, string s, out string sResponse)
+        {
+            InputBox box = new InputBox(sPrompt, s, false, true, sLabel);
+            box.m_fCanceled = false;
+
+            box.Show();
+
+            // now wait for it to be dismissed
+            while (box.Visible)
+                {
+                Application.DoEvents();
+                Thread.Sleep(500);
+                Application.DoEvents();
+                }
+
+            sResponse = box.textBox1.Text;
+            return !box.m_fCanceled;
+        }
+
+        public static bool ShowBrowseBox(string sPrompt, string s, out string sResponse, string sFilter, int width)
 		{
-			InputBox box = new InputBox(sPrompt, s, true, null);
+			InputBox box = new InputBox(sPrompt, s, true, false, null);
 			box.Size = new Size(width, box.Size.Height);
 			box.m_fCanceled = false;
 			box.m_sFilter = sFilter;
