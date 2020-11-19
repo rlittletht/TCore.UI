@@ -2,9 +2,13 @@
 using System.Windows.Forms;
 using System.Drawing;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace TCore.UI
@@ -27,13 +31,13 @@ namespace TCore.UI
 			%%Contact: rlittle
 
 		----------------------------------------------------------------------------*/
-		private InputBox(string sPrompt, string sText, bool fShowBrowse, string sLabel)
+		private InputBox(string sPrompt, string sText, bool fShowBrowse, bool fHideInput, string sLabel)
 		{
 			m_sLabel = sLabel;
-			InitializeComponent(fShowBrowse);
+			InitializeComponent(fShowBrowse, fHideInput);
 			if (sText != null)
 				textBox1.Text = sText;
-	
+
 			this.Text = sPrompt;
 		}
 	
@@ -63,7 +67,7 @@ namespace TCore.UI
 			%%Contact: rlittle
 
 		----------------------------------------------------------------------------*/
-		private void InitializeComponent(bool fShowBrowse)
+		private void InitializeComponent(bool fShowBrowse, bool fHideInput)
 		{
 			this.textBox1 = new System.Windows.Forms.TextBox();
 			this.m_lbl = new Label();
@@ -162,13 +166,16 @@ namespace TCore.UI
 			this.Controls.AddRange(new System.Windows.Forms.Control[] {
 																		 this.button2,
 																		 this.button1,
-																		 this.m_lbl,
-																		 this.textBox1});
+																		 this.m_lbl});
 			if (fShowBrowse)
 				{
 				Controls.Add(buttonBrowse);
 				}
 
+            if (!fHideInput)
+                {
+                Controls.Add(this.textBox1);
+                }
 //			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
 			this.Name = "InputBox";
 			this.Text = "InputBox";
@@ -241,7 +248,7 @@ namespace TCore.UI
 		----------------------------------------------------------------------------*/
 		public static bool ShowInputBox(string sPrompt, string s, out string sResponse)
 		{
-			InputBox box = new InputBox(sPrompt, s, false, null);
+			InputBox box = new InputBox(sPrompt, s, false, false, null);
 			box.m_fCanceled = false;
 
 			box.ShowDialog();
@@ -251,17 +258,36 @@ namespace TCore.UI
 
 		public static bool ShowInputBox(string sPrompt, string sLabel, string s, out string sResponse)
 		{
-			InputBox box = new InputBox(sPrompt, s, false, sLabel);
+			InputBox box = new InputBox(sPrompt, s, false, false, sLabel);
 			box.m_fCanceled = false;
 
 			box.ShowDialog();
 			sResponse = box.textBox1.Text;
 			return !box.m_fCanceled;
-		}    
+		}
 
-		public static bool ShowBrowseBox(string sPrompt, string s, out string sResponse, string sFilter, int width)
+        public static bool ShowInputBoxModelessWait(string sPrompt, string sLabel, string s, out string sResponse)
+        {
+            InputBox box = new InputBox(sPrompt, s, false, true, sLabel);
+            box.m_fCanceled = false;
+
+            box.Show();
+
+            // now wait for it to be dismissed
+            while (box.Visible)
+                {
+                Application.DoEvents();
+                Thread.Sleep(500);
+                Application.DoEvents();
+                }
+
+            sResponse = box.textBox1.Text;
+            return !box.m_fCanceled;
+        }
+
+        public static bool ShowBrowseBox(string sPrompt, string s, out string sResponse, string sFilter, int width)
 		{
-			InputBox box = new InputBox(sPrompt, s, true, null);
+			InputBox box = new InputBox(sPrompt, s, true, false, null);
 			box.Size = new Size(width, box.Size.Height);
 			box.m_fCanceled = false;
 			box.m_sFilter = sFilter;
@@ -273,7 +299,83 @@ namespace TCore.UI
 		}    
 	}
 
-    public class ui
+    public class ListViewEx : ListView // flicker free?
     {
+        #region Static Functionality
+
+        private static FieldInfo _internalVirtualListSizeField;
+
+        public ListViewEx()
+        {
+            this.DoubleBuffered = true;
+        }
+        static ListViewEx()
+        {
+            _internalVirtualListSizeField = typeof (ListView).GetField("virtualListSize", System.Reflection.BindingFlags.NonPublic | BindingFlags.Instance);
+
+            if (_internalVirtualListSizeField == null)
+                {
+                string msg =
+                    "Private field virtualListSize in type System.Windows.Forms.ListView is not found. Workaround is incompatible with installed .NET Framework version, running without workaround.";
+                Trace.WriteLine(msg);
+                }
+        }
+
+        #endregion
+
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        private static extern IntPtr SendMessage(HandleRef hWnd, int msg, IntPtr wParam, IntPtr lParam);
+
+        internal IntPtr SendMessage(int msg, IntPtr wparam, IntPtr lparam)
+        {
+            return SendMessage(new HandleRef(this, this.Handle), msg, wparam, lparam);
+        }
+
+        public void SetVirtualListSize(int size)
+        {
+            // if workaround incompatible with current framework version (usually MONO)
+            if (_internalVirtualListSizeField == null)
+                {
+                VirtualListSize = size;
+                }
+            else
+                {
+                if (size < 0)
+                    {
+                    throw new ArgumentException("ListViewVirtualListSizeInvalidArgument");
+                    }
+
+                _internalVirtualListSizeField.SetValue(this, size);
+                if ((base.IsHandleCreated && this.VirtualMode) && !base.DesignMode)
+                    {
+                    SendMessage(0x102f, new IntPtr(size), new IntPtr(2));
+                    }
+                }
+        }
+    }
+
+    public class RenderSupp
+    {
+        /* R E N D E R  H E A D I N G  L I N E */
+        /*----------------------------------------------------------------------------
+        	%%Function: RenderHeadingLine
+        	%%Qualified: TCore.UI.RenderSupp.RenderHeadingLine
+        	%%Contact: rlittle
+        	
+        ----------------------------------------------------------------------------*/
+        static public void RenderHeadingLine(object sender, System.Windows.Forms.PaintEventArgs e)
+        {
+            Label lbl = (Label)sender;
+            string s = (string)lbl.Tag;
+
+            SizeF sf = e.Graphics.MeasureString(s, lbl.Font);
+            int nWidth = (int)sf.Width;
+            int nHeight = (int)sf.Height;
+
+            e.Graphics.DrawString(s, lbl.Font, new SolidBrush(Color.SlateBlue), 0, 0);// new System.Drawing.Point(0, (lbl.Width - nWidth) / 2));
+            e.Graphics.DrawLine(new Pen(new SolidBrush(Color.Gray), 1), 6 + nWidth + 1, (nHeight / 2), lbl.Width, (nHeight / 2));
+        }
+
     }
 }
