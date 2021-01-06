@@ -3,6 +3,7 @@ using System.Windows.Forms;
 using System.Drawing;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing.Configuration;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -23,7 +24,8 @@ namespace TCore.UI
 		private bool m_fCanceled = false;
 		private string m_sFilter = "All Files (*.*)|*.*";
 		private string m_sLabel = null;
-
+		private RadioButton[] radioButtons;
+		
 		/* I N P U T  B O X */
 		/*----------------------------------------------------------------------------
 			%%Function: InputBox
@@ -31,10 +33,15 @@ namespace TCore.UI
 			%%Contact: rlittle
 
 		----------------------------------------------------------------------------*/
-		private InputBox(string sPrompt, string sText, bool fShowBrowse, bool fHideInput, string sLabel)
+		private InputBox(string sPrompt, string sText, bool fShowBrowse, bool fHideInput, string sLabel, RadioGroup radioGroup = null)
 		{
 			m_sLabel = sLabel;
-			InitializeComponent(fShowBrowse, fHideInput);
+			InitializeComponent(fShowBrowse, fHideInput, radioGroup);
+			if (radioGroup != null)
+			{
+				foreach (RadioButton button in radioButtons)
+					button.Checked = (button.Tag != null && string.Compare(radioGroup.Initial, (string) button.Tag) == 0);
+			}
 			if (sText != null)
 				textBox1.Text = sText;
 
@@ -67,7 +74,7 @@ namespace TCore.UI
 			%%Contact: rlittle
 
 		----------------------------------------------------------------------------*/
-		private void InitializeComponent(bool fShowBrowse, bool fHideInput)
+		private void InitializeComponent(bool fShowBrowse, bool fHideInput, RadioGroup radioGroup)
 		{
 			this.textBox1 = new System.Windows.Forms.TextBox();
 			this.m_lbl = new Label();
@@ -75,8 +82,17 @@ namespace TCore.UI
 			this.button2 = new Button();
 			this.buttonBrowse = new Button();
 			this.SuspendLayout();
+			float dxfRadioWidth = 0;
 
-			float dxfTextBox = 262;
+			if (radioGroup != null)
+			{
+				dxfRadioWidth = 0;
+				foreach (string radioLabel in radioGroup.Buttons)
+					dxfRadioWidth += TextRenderer.MeasureText(radioLabel, this.Font).Width + 25;
+			}
+
+			float dxfTextBox = Math.Max(dxfRadioWidth + 98, 262);
+				
 			if (fShowBrowse)
 				{
 				buttonBrowse.Anchor =  AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right;
@@ -125,22 +141,63 @@ namespace TCore.UI
 			this.m_lbl.Size = new System.Drawing.Size((int)xfLabel, Math.Max(12, (int)yfLabel));
 			this.m_lbl.Location = new System.Drawing.Point(16, 18);
 
+			float dxfTextBoxLeft = 16 + (int)dxfAdjustLabel;
+			float dyfTextBoxTop = 16 + (int)dyfAdjustLabel;
+
 			//
 			// textBox1
 			//
 			this.textBox1.Anchor =  AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Left;
-			this.textBox1.Location = new System.Drawing.Point(16 + (int)dxfAdjustLabel, 16 + (int)dyfAdjustLabel);
+			this.textBox1.Location = new System.Drawing.Point((int)dxfTextBoxLeft, (int)dyfTextBoxTop);
 			this.textBox1.Name = "textBox1";
 			this.textBox1.Size = new System.Drawing.Size((int)dxfTextBox - (int)dxfAdjustLabel, 20);
 			this.textBox1.TabIndex = 0;
 			this.textBox1.Text = "";
 			this.textBox1.KeyDown += new System.Windows.Forms.KeyEventHandler(this.textBox1_KeyDown);
 
-				// 
+			GroupBox groupBox = null;
+			float dyfGroupBox = 0.0f;
+			if (radioGroup != null)
+			{
+				groupBox = new GroupBox();
+				groupBox.SuspendLayout();
+				groupBox.Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Top;
+				groupBox.Location = new Point((int)dxfTextBoxLeft, textBox1.Bottom + 8);
+				groupBox.Text = radioGroup.GroupLabel;
+				groupBox.Name = "radioGroup";
+				groupBox.Size = new Size((int)dxfRadioWidth, 48);
+
+				int dxRadio = 5;
+				int dyRadio = 20;
+				radioButtons = new RadioButton[radioGroup.Buttons.Length];
+
+				int iButton = 0;
+				foreach (string radioLabel in radioGroup.Buttons)
+				{
+					RadioButton radio = new RadioButton();
+					radio.AutoSize = true;
+					radio.Location = new Point(dxRadio, 20);
+					radio.Size = TextRenderer.MeasureText(radioLabel, this.Font);
+					radio.Width += 15;
+					radio.Height += 5;
+
+					radio.Text = radioLabel;
+					radio.Tag = radioLabel;
+					
+					groupBox.Controls.Add(radio);
+					dxRadio += radio.Size.Width + 10;
+					radioButtons[iButton++] = radio;
+				}
+
+				dyfGroupBox = groupBox.Height;
+			}
+
+			dyfGroupBox -= 30; // we only want to grow by what we weren't already taking up with the buttons
+			// 
 			// button1
 			// 
 			this.button1.Anchor =  AnchorStyles.Bottom | AnchorStyles.Right;
-			this.button1.Location = new System.Drawing.Point(182, 48 + (int)dyfAdjustLabel);
+			this.button1.Location = new System.Drawing.Point(182, 48 + (int)dyfAdjustLabel + (int)dyfGroupBox);
 			this.button1.Name = "button1";
 			this.button1.Size = new System.Drawing.Size(48, 24);
 			this.button1.TabIndex = 2;
@@ -150,7 +207,7 @@ namespace TCore.UI
 			// button2
 			// 
 			this.button2.Anchor =  AnchorStyles.Bottom | AnchorStyles.Right;
-			this.button2.Location = new System.Drawing.Point(232, 48 + (int)dyfAdjustLabel);
+			this.button2.Location = new System.Drawing.Point(232, 48 + (int)dyfAdjustLabel + (int)dyfGroupBox);
 			this.button2.Name = "button2";
 			this.button2.Size = new System.Drawing.Size(48, 24);
 			this.button2.TabIndex = 3;
@@ -161,7 +218,7 @@ namespace TCore.UI
 			// InputBox
 			//
 			this.AutoScaleBaseSize = new System.Drawing.Size(5, 13);
-			this.ClientSize = new System.Drawing.Size(292, 93 + (int)dyfAdjustLabel);
+			this.ClientSize = new System.Drawing.Size(292, 93 + (int)dyfAdjustLabel + (int)dyfGroupBox);
 			this.ControlBox = false;
 			this.Controls.AddRange(new System.Windows.Forms.Control[] {
 																		 this.button2,
@@ -172,6 +229,9 @@ namespace TCore.UI
 				Controls.Add(buttonBrowse);
 				}
 
+			if (groupBox != null)
+				Controls.Add(groupBox);
+			
             if (!fHideInput)
                 {
                 Controls.Add(this.textBox1);
@@ -179,6 +239,12 @@ namespace TCore.UI
 //			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
 			this.Name = "InputBox";
 			this.Text = "InputBox";
+
+			if (groupBox != null)
+			{
+				groupBox.ResumeLayout();
+				groupBox.PerformLayout();
+			}
 			this.ResumeLayout(false);
 	
 		}
@@ -238,7 +304,30 @@ namespace TCore.UI
 		{
 			return ShowInputBox(sPrompt, null, out sResponse);
 		}
-	
+
+		public class RadioGroup
+		{
+			public string GroupLabel { get; set; }
+			public string[] Buttons { get; set; }
+			public string Initial { get; set; }
+			
+			public RadioGroup(string label, string[] buttons, string initial = null)
+			{
+				GroupLabel = label;
+				Buttons = buttons.ToArray();
+				if (initial == null)
+					Initial = Buttons[0];
+				else
+					Initial = initial;
+			}
+		}
+
+
+		public static bool ShowInputBox(string sPrompt, RadioGroup radioGroup, out string sResponse, out string radioResponse)
+		{
+			return ShowInputBox(sPrompt, null, null, radioGroup, out sResponse, out radioResponse);
+		}
+
 		/* S H O W  I N P U T  B O X */
 		/*----------------------------------------------------------------------------
 			%%Function: ShowInputBox
@@ -254,15 +343,27 @@ namespace TCore.UI
 			box.ShowDialog();
 			sResponse = box.textBox1.Text;
 			return !box.m_fCanceled;
-		}    
+		}
 
 		public static bool ShowInputBox(string sPrompt, string sLabel, string s, out string sResponse)
 		{
-			InputBox box = new InputBox(sPrompt, s, false, false, sLabel);
+			return ShowInputBox(sPrompt, sLabel, s, null, out sResponse, out string radioResponse);
+		}
+
+		public static bool ShowInputBox(string sPrompt, string sLabel, string s, RadioGroup radioGroup, out string sResponse, out string radioResponse)
+		{
+			InputBox box = new InputBox(sPrompt, s, false, false, sLabel, radioGroup);
 			box.m_fCanceled = false;
 
 			box.ShowDialog();
 			sResponse = box.textBox1.Text;
+			radioResponse = null;
+			if (radioGroup != null)
+			{
+				foreach(RadioButton button in box.radioButtons)
+					if (button.Checked)
+						radioResponse = (string)button.Tag;
+			}
 			return !box.m_fCanceled;
 		}
 
