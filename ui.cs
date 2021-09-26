@@ -28,10 +28,10 @@ namespace TCore.UI
 			%%Contact: rlittle
 
 		----------------------------------------------------------------------------*/
-		private InputBox(string sPrompt, string sText, bool fShowBrowse, bool fHideInput, string sLabel)
+		private InputBox(string sPrompt, string sText, bool fShowBrowse, bool fHideInput, string sLabel, Form parent)
 		{
 			m_sLabel = sLabel;
-			InitializeComponent(fShowBrowse, fHideInput);
+			InitializeComponent(fShowBrowse, fHideInput, parent);
 			if (sText != null)
 				textBox1.Text = sText;
 
@@ -64,8 +64,14 @@ namespace TCore.UI
 			%%Contact: rlittle
 
 		----------------------------------------------------------------------------*/
-		private void InitializeComponent(bool fShowBrowse, bool fHideInput)
+		private void InitializeComponent(bool fShowBrowse, bool fHideInput, Form parent)
 		{
+			if (parent != null)
+				this.Owner = parent;
+
+			this.StartPosition = FormStartPosition.Manual;
+			this.Location = new Point(parent.Location.X + 25, parent.Location.Y + 25);
+
 			this.textBox1 = new System.Windows.Forms.TextBox();
 			this.m_lbl = new Label();
 			this.button1 = new Button();
@@ -243,9 +249,9 @@ namespace TCore.UI
 			%%Contact: rlittle
 
 		----------------------------------------------------------------------------*/
-		public static bool ShowInputBox(string sPrompt, string s, out string sResponse)
+		public static bool ShowInputBox(string sPrompt, string s, out string sResponse, Form parent = null)
 		{
-			InputBox box = new InputBox(sPrompt, s, false, false, null);
+			InputBox box = new InputBox(sPrompt, s, false, false, null, parent);
 			box.m_fCanceled = false;
 
 			box.ShowDialog();
@@ -253,9 +259,9 @@ namespace TCore.UI
 			return !box.m_fCanceled;
 		}
 
-		public static bool ShowInputBox(string sPrompt, string sLabel, string s, out string sResponse)
+		public static bool ShowInputBox(string sPrompt, string sLabel, string s, out string sResponse, Form parent = null)
 		{
-			InputBox box = new InputBox(sPrompt, s, false, false, sLabel);
+			InputBox box = new InputBox(sPrompt, s, false, false, sLabel, parent);
 			box.m_fCanceled = false;
 
 			box.ShowDialog();
@@ -263,9 +269,9 @@ namespace TCore.UI
 			return !box.m_fCanceled;
 		}
 
-		public static bool ShowInputBoxModelessWait(string sPrompt, string sLabel, string s, out string sResponse)
+		public static bool ShowInputBoxModelessWait(string sPrompt, string sLabel, string s, out string sResponse, Form parent = null)
 		{
-			InputBox box = new InputBox(sPrompt, s, false, true, sLabel);
+			InputBox box = new InputBox(sPrompt, s, false, true, sLabel, parent);
 			box.m_fCanceled = false;
 
 			box.Show();
@@ -282,9 +288,9 @@ namespace TCore.UI
 			return !box.m_fCanceled;
 		}
 
-		public static bool ShowBrowseBox(string sPrompt, string s, out string sResponse, string sFilter, int width)
+		public static bool ShowBrowseBox(string sPrompt, string s, out string sResponse, string sFilter, int width, Form parent = null)
 		{
-			InputBox box = new InputBox(sPrompt, s, true, false, null);
+			InputBox box = new InputBox(sPrompt, s, true, false, null, parent);
 			box.Size = new Size(width, box.Size.Height);
 			box.m_fCanceled = false;
 			box.m_sFilter = sFilter;
