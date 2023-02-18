@@ -30,10 +30,10 @@ namespace TCore.UI
 			%%Contact: rlittle
 
 		----------------------------------------------------------------------------*/
-		private InputBox(string sPrompt, string sText, bool fShowBrowse, bool fHideInput, string sLabel, RadioGroup radioGroup = null)
+		private InputBox(string sPrompt, string sText, bool fShowBrowse, bool fHideInput, string sLabel, RadioGroup radioGroup = null, Form parent = null)
 		{
 			m_sLabel = sLabel;
-			InitializeComponent(fShowBrowse, fHideInput, radioGroup);
+			InitializeComponent(fShowBrowse, fHideInput, radioGroup, parent);
 			if (radioGroup != null)
 			{
 				foreach (RadioButton button in radioButtons)
@@ -71,7 +71,7 @@ namespace TCore.UI
 			%%Contact: rlittle
 
 		----------------------------------------------------------------------------*/
-		private void InitializeComponent(bool fShowBrowse, bool fHideInput, RadioGroup radioGroup)
+		private void InitializeComponent(bool fShowBrowse, bool fHideInput, RadioGroup radioGroup, Form parent)
 		{
 			if (parent != null)
 				this.Owner = parent;
@@ -340,7 +340,7 @@ namespace TCore.UI
 		----------------------------------------------------------------------------*/
 		public static bool ShowInputBox(string sPrompt, string s, out string sResponse, Form parent = null)
 		{
-			InputBox box = new InputBox(sPrompt, s, false, false, null, parent);
+			InputBox box = new InputBox(sPrompt, s, false, false, null, null, parent);
 			box.m_fCanceled = false;
 
 			box.ShowDialog();
@@ -372,7 +372,7 @@ namespace TCore.UI
 
 		public static bool ShowInputBoxModelessWait(string sPrompt, string sLabel, string s, out string sResponse, Form parent = null)
 		{
-			InputBox box = new InputBox(sPrompt, s, false, true, sLabel, parent);
+			InputBox box = new InputBox(sPrompt, s, false, true, sLabel, null, parent);
 			box.m_fCanceled = false;
 
 			box.Show();
@@ -391,7 +391,7 @@ namespace TCore.UI
 
 		public static bool ShowBrowseBox(string sPrompt, string s, out string sResponse, string sFilter, int width, Form parent = null)
 		{
-			InputBox box = new InputBox(sPrompt, s, true, false, null, parent);
+			InputBox box = new InputBox(sPrompt, s, true, false, null, null, parent);
 			box.Size = new Size(width, box.Size.Height);
 			box.m_fCanceled = false;
 			box.m_sFilter = sFilter;
