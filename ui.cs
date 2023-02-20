@@ -22,15 +22,17 @@ namespace TCore.UI
 		private string m_sFilter = "All Files (*.*)|*.*";
 		private string m_sLabel = null;
 		private RadioButton[] radioButtons;
-		
-		/* I N P U T  B O X */
+
+        private bool m_fRequireFileExists = true;
+
+        /* I N P U T  B O X */
 		/*----------------------------------------------------------------------------
 			%%Function: InputBox
 			%%Qualified: UI.InputBox.InputBox
 			%%Contact: rlittle
 
 		----------------------------------------------------------------------------*/
-		private InputBox(string sPrompt, string sText, bool fShowBrowse, bool fHideInput, string sLabel, RadioGroup radioGroup = null, Form parent = null)
+		private InputBox(string sPrompt, string sInitialInputText, bool fShowBrowse, bool fHideInput, string sLabel, RadioGroup radioGroup = null, Form parent = null)
 		{
 			m_sLabel = sLabel;
 			InitializeComponent(fShowBrowse, fHideInput, radioGroup, parent);
@@ -39,8 +41,8 @@ namespace TCore.UI
 				foreach (RadioButton button in radioButtons)
 					button.Checked = (button.Tag != null && string.Compare(radioGroup.Initial, (string) button.Tag) == 0);
 			}
-			if (sText != null)
-				textBox1.Text = sText;
+			if (sInitialInputText != null)
+				textBox1.Text = sInitialInputText;
 
 			this.Text = sPrompt;
 		}
@@ -76,10 +78,13 @@ namespace TCore.UI
 			if (parent != null)
 				this.Owner = parent;
 
-			this.StartPosition = FormStartPosition.Manual;
-			this.Location = new Point(parent.Location.X + 25, parent.Location.Y + 25);
+            if (parent != null)
+            {
+                this.StartPosition = FormStartPosition.Manual;
+    			this.Location = new Point(parent.Location.X + 25, parent.Location.Y + 25);
+            }
 
-			this.textBox1 = new System.Windows.Forms.TextBox();
+            this.textBox1 = new System.Windows.Forms.TextBox();
 			this.m_lbl = new Label();
 			this.button1 = new Button();
 			this.button2 = new Button();
@@ -98,8 +103,8 @@ namespace TCore.UI
 				
 			if (fShowBrowse)
 			{
-				buttonBrowse.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Right;
-				buttonBrowse.Location = new Point(256, 19);
+				buttonBrowse.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+				buttonBrowse.Location = new Point(256, 17);
 				buttonBrowse.Name = "browse";
 				buttonBrowse.Size = new Size(24, 17);
 				dxfTextBox -= 24.0f;
@@ -114,6 +119,7 @@ namespace TCore.UI
 			float yfLabel = 0.0f;
 
 			this.m_lbl.Anchor = AnchorStyles.Top | AnchorStyles.Right | AnchorStyles.Left;
+			this.m_lbl.AutoSize = true;
 			this.m_lbl.Name = "m_lbl";
 			this.m_lbl.TabIndex = 0;
 			this.m_lbl.Text = "";
@@ -138,13 +144,14 @@ namespace TCore.UI
 					dxfAdjustLabel = szLabel.Width + 8.0f;
 					xfLabel = dxfAdjustLabel;
 				}
-				this.m_lbl.Text = m_sLabel;
+
+                this.m_lbl.Text = m_sLabel;
 			}
 
 			this.m_lbl.Size = new System.Drawing.Size((int)xfLabel, Math.Max(12, (int)yfLabel));
 			this.m_lbl.Location = new System.Drawing.Point(16, 18);
-
-			float dxfTextBoxLeft = 16 + (int)dxfAdjustLabel;
+			this.m_lbl.Anchor = AnchorStyles.Top | AnchorStyles.Left;
+            float dxfTextBoxLeft = 16 + (int)dxfAdjustLabel;
 			float dyfTextBoxTop = 16 + (int)dyfAdjustLabel;
 
 			//
@@ -158,7 +165,13 @@ namespace TCore.UI
 			this.textBox1.Text = "";
 			this.textBox1.KeyDown += new System.Windows.Forms.KeyEventHandler(this.textBox1_KeyDown);
 
-			GroupBox groupBox = null;
+            if (fShowBrowse)
+            {
+                buttonBrowse.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+                buttonBrowse.Location = new Point(256, (int)dyfTextBoxTop);
+            }
+
+            GroupBox groupBox = null;
 			float dyfGroupBox = 0.0f;
 			if (radioGroup != null)
 			{
@@ -193,14 +206,14 @@ namespace TCore.UI
 				}
 
 				dyfGroupBox = groupBox.Height;
+                dyfGroupBox -= 30; // we only want to grow by what we weren't already taking up with the buttons
 			}
 
-			dyfGroupBox -= 30; // we only want to grow by what we weren't already taking up with the buttons
-			// 
-			// button1
-			// 
-			this.button1.Anchor =  AnchorStyles.Bottom | AnchorStyles.Right;
-			this.button1.Location = new System.Drawing.Point(182, 48 + (int)dyfAdjustLabel + (int)dyfGroupBox);
+            // 
+            // button1
+            // 
+            this.button1.Anchor =  AnchorStyles.Bottom | AnchorStyles.Right;
+			this.button1.Location = new System.Drawing.Point(182, (int)dyfTextBoxTop + this.textBox1.Height + (int)dyfGroupBox);
 			this.button1.Name = "button1";
 			this.button1.Size = new System.Drawing.Size(48, 24);
 			this.button1.TabIndex = 2;
@@ -210,7 +223,7 @@ namespace TCore.UI
 			// button2
 			// 
 			this.button2.Anchor =  AnchorStyles.Bottom | AnchorStyles.Right;
-			this.button2.Location = new System.Drawing.Point(232, 48 + (int)dyfAdjustLabel + (int)dyfGroupBox);
+			this.button2.Location = new System.Drawing.Point(232, (int)dyfTextBoxTop + this.textBox1.Height + (int)dyfGroupBox);
 			this.button2.Name = "button2";
 			this.button2.Size = new System.Drawing.Size(48, 24);
 			this.button2.TabIndex = 3;
@@ -223,10 +236,11 @@ namespace TCore.UI
 			this.AutoScaleBaseSize = new System.Drawing.Size(5, 13);
 			this.ClientSize = new System.Drawing.Size(292, 93 + (int)dyfAdjustLabel + (int)dyfGroupBox);
 			this.ControlBox = false;
-			this.Controls.AddRange(new System.Windows.Forms.Control[] {
-																		 this.button2,
-																		 this.button1,
-																		 this.m_lbl});
+
+            this.Controls.Add(button2);
+            this.Controls.Add(button1);
+            this.Controls.Add(m_lbl);
+
 			if (fShowBrowse)
 			{
 				Controls.Add(buttonBrowse);
@@ -249,8 +263,9 @@ namespace TCore.UI
 				groupBox.PerformLayout();
 			}
 			this.ResumeLayout(false);
+            PerformLayout();
 
-		}
+        }
 
 		/* T E X T  B O X  1  _ K E Y  D O W N */
 		/*----------------------------------------------------------------------------
@@ -291,6 +306,8 @@ namespace TCore.UI
 				ofd.InitialDirectory = s == null ? "" : s;
 			}
 			ofd.Filter = m_sFilter;
+
+            ofd.CheckFileExists = m_fRequireFileExists;
 
 			if (ofd.ShowDialog() == DialogResult.OK)
 				textBox1.Text = ofd.FileName;
@@ -389,14 +406,15 @@ namespace TCore.UI
 			return !box.m_fCanceled;
 		}
 
-		public static bool ShowBrowseBox(string sPrompt, string s, out string sResponse, string sFilter, int width, Form parent = null)
+		public static bool ShowBrowseBox(string sPrompt, string s, out string sResponse, string sFilter, int width, bool fRequireFileExists, Form parent = null)
 		{
-			InputBox box = new InputBox(sPrompt, s, true, false, null, null, parent);
+			InputBox box = new InputBox("Select file", s, true, false, sPrompt, null, parent);
 			box.Size = new Size(width, box.Size.Height);
 			box.m_fCanceled = false;
 			box.m_sFilter = sFilter;
-
-			box.m_lbl.Visible = false;
+			box.m_fRequireFileExists = fRequireFileExists;
+            
+			// box.m_lbl.Visible = false;
 			box.ShowDialog();
 			sResponse = box.textBox1.Text;
 			return !box.m_fCanceled;
